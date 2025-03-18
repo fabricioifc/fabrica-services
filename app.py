@@ -39,9 +39,7 @@ logger = logging.getLogger("email-api")
 @app.route('/health', methods=['GET'])
 def health_check():
     try:
-        # Verificar se as configurações SMTP estão válidas
-        config = validar_configuracoes()
-        
+        config = validar_configuracoes()  # Deve ser mockado
         return jsonify({
             "status": "ok",
             "timestamp": time.time(),
@@ -66,11 +64,17 @@ def health_check():
 @app.route('/api/enviar-email', methods=['POST'])
 def api_enviar_email():
     try:
-        # Registrar requisição recebida
         logger.info(f"Requisição recebida de {request.remote_addr}")
         
-        # Obter dados da requisição
-        dados = request.json
+        # Tentar obter os dados JSON, tratando exceções específicas
+        try:
+            dados = request.json
+        except Exception as e:
+            logger.warning(f"Erro ao parsear JSON: {str(e)}")
+            return jsonify({
+                "sucesso": False,
+                "mensagem": "Nenhum dado fornecido ou formato JSON inválido"
+            }), 400
         
         if not dados:
             logger.warning("Requisição sem dados")
@@ -79,7 +83,6 @@ def api_enviar_email():
                 "mensagem": "Nenhum dado fornecido"
             }), 400
         
-        # Verificar campos obrigatórios
         campos_obrigatorios = ['destinatario', 'assunto', 'corpo']
         for campo in campos_obrigatorios:
             if campo not in dados:
@@ -89,10 +92,7 @@ def api_enviar_email():
                     "mensagem": f"Campo obrigatório ausente: {campo}"
                 }), 400
         
-        # Modo debug opcional a partir da requisição
         debug_mode = dados.get('debug', False)
-        
-        # Enviar o email usando nossa função melhorada
         resultado = enviar_email(
             destinatario=dados['destinatario'],
             assunto=dados['assunto'],
@@ -100,18 +100,15 @@ def api_enviar_email():
             debug=debug_mode
         )
         
-        # Registrar resultado
         if resultado["sucesso"]:
             logger.info(f"Email enviado com sucesso para {dados['destinatario']}")
         else:
             logger.error(f"Falha ao enviar email: {resultado['mensagem']}")
         
-        # Retornar o resultado
         status_code = 200 if resultado["sucesso"] else 500
         return jsonify(resultado), status_code
         
     except Exception as e:
-        # Tratamento de erros gerais
         logger.exception("Erro não tratado na API")
         return jsonify({
             "sucesso": False,

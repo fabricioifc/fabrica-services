@@ -1,4 +1,4 @@
-# Dockerfile com argumentos configuráveis
+# Dockerfile
 ARG PYTHON_VERSION=3.13
 FROM python:${PYTHON_VERSION}-slim
 
@@ -18,14 +18,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copiar o código da aplicação
+# Copiar o código da aplicação, testes e o script de entrypoint
 COPY . .
+COPY entrypoint.sh .
 
 # Criar diretório para logs e definir permissões
 RUN mkdir -p /app/logs && chmod 755 /app/logs
+# Tornar o script executável
+RUN chmod +x entrypoint.sh
 
 # Expor a porta configurável
 EXPOSE ${SERVICE_PORT}
 
-# Comando para iniciar a aplicação
-CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${SERVICE_PORT} --workers ${GUNICORN_WORKERS:-2} --timeout ${GUNICORN_TIMEOUT:-120} app:app"]
+# Definir o entrypoint
+ENTRYPOINT ["./entrypoint.sh"]
+
+# CMD pode ser usado para argumentos adicionais, mas não é necessário aqui
+# CMD []
