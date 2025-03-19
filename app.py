@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Blueprint
 from services.email_service import enviar_email, validar_configuracoes
 import logging
 import time
@@ -8,6 +8,7 @@ import os
 SERVICE_PORT = int(os.getenv("SERVICE_PORT", "5000"))
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 DEBUG_MODE = os.getenv("FLASK_DEBUG", "False").lower() == "true"
+APPLICATION_ROOT = os.getenv("APPLICATION_ROOT", "")  # Prefixo da aplicação, vazio por padrão
 
 # Mapear string de nível de log para constantes do logging
 log_levels = {
@@ -35,8 +36,11 @@ logging.basicConfig(
 )
 logger = logging.getLogger("email-api")
 
+# Criar Blueprint para a API principal
+api_bp = Blueprint('api', __name__)
+
 # Endpoint para verificação de saúde do serviço
-@app.route('/health', methods=['GET'])
+@api_bp.route('/health', methods=['GET'])
 def health_check():
     try:
         config = validar_configuracoes()  # Deve ser mockado
@@ -61,7 +65,7 @@ def health_check():
         }), 500
 
 # Endpoint para envio de email
-@app.route('/api/enviar-email', methods=['POST'])
+@api_bp.route('/api/enviar-email', methods=['POST'])
 def api_enviar_email():
     try:
         logger.info(f"Requisição recebida de {request.remote_addr}")
@@ -117,8 +121,8 @@ def api_enviar_email():
         }), 500
 
 # Rota raiz para documentação básica
-@app.route('/', methods=['GET'])
-def documentacao():
+@api_bp.route('/', methods=['GET'])
+def index():  # Mudamos o nome da função para 'index'
     return jsonify({
         "service": "Email Service API",
         "version": "1.0",
@@ -130,6 +134,46 @@ def documentacao():
         "port": SERVICE_PORT,
         "mode": "development" if DEBUG_MODE else "production"
     })
+
+# Registrar o blueprint com o prefixo se configurado
+if APPLICATION_ROOT:
+    app.register_blueprint(api_bp, url_prefix=APPLICATION_ROOT)
+else:
+    app.register_blueprint(api_bp)
+
+# Corrigindo o problema: criamos uma função que implementa diretamente a mesma lógica
+# em vez de tentar acessar a função pelo nome no dicionário view_functions
+services_bp = Blueprint('services', __name__, url_prefix='/services')
+
+@services_bp.route('/health', methods=['GET'])
+def services_health_check():
+    return health_check()  # Chamamos a função diretamente
+
+@services_bp.route('/api/enviar-email', methods=['POST'])
+def services_api_enviar_email():
+    return api_enviar_email()  # Chamamos a função diretamente
+
+@services_bp.route('/', methods=['GET'])
+def services_index():
+    # Implementamos a mesma lógica diretamente
+    return jsonify({
+        "service": "Email Service API",
+        "version": "1.0",
+        "endpoints": {
+            "/health": "GET - Verificação de saúde do serviço",
+            "/api/enviar-email": "POST - Envio de email"
+        },
+        "documentation": "Para mais informações, consulte a documentação interna",
+        "port": SERVICE_PORT,
+        "mode": "development" if DEBUG_MODE else "production"
+    })
+
+app.register_blueprint(services_bp)
+
+# Adicionar rotas de fallback para diferentes combinações de prefixos
+@app.route('/services', methods=['GET'])
+def services_root():
+    return services_index()  # Chamamos a função diretamente
 
 if __name__ == '__main__':
     # Usar apenas para desenvolvimento local
