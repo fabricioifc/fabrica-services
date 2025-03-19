@@ -1,4 +1,3 @@
-# Dockerfile
 ARG PYTHON_VERSION=3.13
 FROM python:${PYTHON_VERSION}-slim
 
@@ -18,20 +17,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copiar o código da aplicação, testes e o script de entrypoint
+# Copiar o código da aplicação e testes
 COPY . .
-COPY entrypoint.sh .
+
+# Executar os testes durante o build
+RUN pytest tests/ --cov=app --cov=services --cov-report=term-missing --cov-fail-under=75
 
 # Criar diretório para logs e definir permissões
 RUN mkdir -p /app/logs && chmod 755 /app/logs
-# Tornar o script executável
+
+# Copiar e tornar o script de entrypoint executável
+COPY entrypoint.sh .
 RUN chmod +x entrypoint.sh
 
 # Expor a porta configurável
 EXPOSE ${SERVICE_PORT}
 
-# Definir o entrypoint
+# Definir o entrypoint para iniciar a aplicação
 ENTRYPOINT ["./entrypoint.sh"]
-
-# CMD pode ser usado para argumentos adicionais, mas não é necessário aqui
-# CMD []
