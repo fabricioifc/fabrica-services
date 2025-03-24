@@ -21,17 +21,40 @@ services:
       - TZ=${TIMEZONE:-UTC}
       - GUNICORN_WORKERS=${GUNICORN_WORKERS:-2}
       - GUNICORN_TIMEOUT=${GUNICORN_TIMEOUT:-120}
+      - API_KEY=${API_KEY:-} # Chave de API para autenticação
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:8000,https://fsw-ifc.brdrive.net}
     volumes:
       - ${LOG_DIR:-./logs}:/app/logs
     networks:
       - fabrica-service-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${SERVICE_PORT:-5000}/health"]
+      test:
+        ["CMD", "curl", "-f", "http://localhost:${SERVICE_PORT:-5000}/health"]
       interval: ${HEALTHCHECK_INTERVAL:-30s}
       timeout: ${HEALTHCHECK_TIMEOUT:-10s}
       retries: ${HEALTHCHECK_RETRIES:-3}
       start_period: ${HEALTHCHECK_START_PERIOD:-10s}
+    # Limitar recursos
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 256M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
+    # Desabilitar acesso ao sistema de arquivos root
+    read_only: true
+    # Diretórios temporários necessários
+    tmpfs:
+      - /tmp
+      - /var/run
 
 networks:
   fabrica-service-network:
     driver: bridge
+    # Configurações adicionais de segurança de rede
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.0.0/16
