@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, Blueprint, abort
+from flask import Flask, request, jsonify, Blueprint, abort, render_template
 from flask_cors import CORS
 from services.email_service import enviar_email, validar_configuracoes
 import logging
@@ -13,22 +13,26 @@ import json
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from werkzeug.exceptions import BadRequest
+from flask_swagger_ui import get_swaggerui_blueprint
 
 # Configurações de aplicação
 SERVICE_PORT = int(os.getenv("SERVICE_PORT", "5000"))
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 DEBUG_MODE = os.getenv("FLASK_DEBUG", "False").lower() == "true"
 APPLICATION_ROOT = os.getenv("APPLICATION_ROOT", "")
-API_KEY = os.getenv("API_KEY", "test-api-key")  # Chave de API para autenticação
+API_KEY = os.getenv("API_KEY", "")  # Chave de API para autenticação
+
+if not API_KEY:
+    raise ValueError("API_KEY não configurada")
 
 # Listas de origens permitidas
-# ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "127.0.0.1,http://localhost:8000,https://fsw-ifc.brdrive.net").split(",")
 ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
 
 # Configuração do Flask
 app = Flask(__name__)
 app.config['JSON_SORT_KEYS'] = False  # Previne que o JSON seja reordenado
 app.config['MAX_CONTENT_LENGTH'] = 1 * 1024 * 1024  # Limite de tamanho do payload (1MB)
+app.config['API_KEY'] = API_KEY  # Adicionar API_KEY ao config
 
 # Configuração do limitador de taxa
 limiter = Limiter(
@@ -40,7 +44,7 @@ limiter = Limiter(
 
 # Configuração do CORS com restrições de origem
 CORS(app, resources={
-    r"/api/*": {
+    r"/*": {  # Alterado para cobrir todos os endpoints
         "origins": ALLOWED_ORIGINS,
         "methods": ["GET", "POST", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization", "X-API-KEY"],
@@ -72,8 +76,17 @@ class RequestIdFilter(logging.Filter):
 logger = logging.getLogger("email-api")
 logger.addFilter(RequestIdFilter())
 
-# Criar Blueprint para a API principal
-api_bp = Blueprint('api', __name__)
+# Configuração do Swagger
+SWAGGER_URL = '/api/docs'  # URL para acessar a UI do Swagger
+API_URL = '/static/swagger.json'  # Onde o arquivo de especificação Swagger está localizado
+
+swaggerui_blueprint = get_swaggerui_blueprint(
+    SWAGGER_URL,
+    API_URL,
+    config={
+        'app_name': "API de Envio de Email"
+    }
+)
 
 # Middleware para adicionar request_id a todas as solicitações
 @app.before_request
@@ -116,6 +129,9 @@ def validate_email_address(email):
     except EmailNotValidError:
         return False
 
+# Criar Blueprint para a API principal
+api_bp = Blueprint('api', __name__)
+
 @api_bp.route('/health', methods=['GET'])
 @limiter.limit("10 per minute")
 def health_check():
@@ -132,7 +148,7 @@ def health_check():
         logger.error(f"Falha na verificação de saúde: {str(e)}")
         return jsonify({"status": "error", "message": "Serviço indisponível"}), 500
 
-@api_bp.route('/api/enviar-email', methods=['POST', 'OPTIONS'])
+@api_bp.route('/enviar-email', methods=['POST', 'OPTIONS'])
 @limiter.limit("50 per minute")  # Limite de taxa específico para envio de email
 @require_api_key  # Proteção com API key
 def api_enviar_email():
@@ -174,22 +190,23 @@ def api_enviar_email():
         except json.JSONDecodeError:
             return jsonify({"sucesso": False, "mensagem": "JSON inválido"}), 400
         
-        # Validar campos obrigatórios primeiro
+        # Validar campos obrigatórios
         campos_obrigatorios = ['destinatario', 'assunto', 'corpo']
         for campo in campos_obrigatorios:
             if campo not in dados:
                 return jsonify({"sucesso": False, "mensagem": f"Campo obrigatório ausente: {campo}"}), 400
-
+        
+        # Validar email do destinatário
+        if not validate_email_address(dados['destinatario']):
+            return jsonify({"sucesso": False, "mensagem": "Email do destinatário inválido"}), 400
+        
+        
         # Verificar tamanho dos campos
         if len(dados['assunto']) > 200:
             return jsonify({"sucesso": False, "mensagem": "Assunto muito longo"}), 400
-
+        
         if len(dados['corpo']) > 50000:
             return jsonify({"sucesso": False, "mensagem": "Corpo do email muito longo"}), 400
-
-        # Por último, validar email do destinatário
-        if not validate_email_address(dados['destinatario']):
-            return jsonify({"sucesso": False, "mensagem": "Email do destinatário inválido"}), 400
         
         # Processar envio do email
         resultado = enviar_email(
@@ -212,7 +229,73 @@ def api_enviar_email():
         logger.exception("Erro não tratado na API")
         return jsonify({"sucesso": False, "mensagem": "Erro no servidor"}), 500
 
-app.register_blueprint(api_bp)
+# Rota para documentação de endpoints (definida diretamente no app, não no blueprint)
+@app.route('/api/endpoints', methods=['GET'])
+def api_endpoints():
+    """
+    Retorna uma listagem e documentação dos endpoints disponíveis.
+    """
+    endpoints = [
+        {
+            "endpoint": "/health",
+            "método": "GET",
+            "descrição": "Verificação de status da API",
+            "requer_autenticação": False,
+            "parâmetros": [],
+            "resposta_exemplo": {
+                "status": "ok",
+                "timestamp": time.time(),
+                "service": "email-service",
+                "version": "1.0",
+                "environment": "production"
+            }
+        },
+        {
+            "endpoint": "/api/enviar-email",
+            "método": "POST",
+            "descrição": "Envia um email para o destinatário especificado",
+            "requer_autenticação": True,
+            "headers": [
+                {"nome": "X-API-KEY", "descrição": "Chave de API para autenticação"},
+                {"nome": "Content-Type", "descrição": "Deve ser application/json"}
+            ],
+            "parâmetros": [
+                {"nome": "destinatario", "tipo": "string", "descrição": "Email do destinatário"},
+                {"nome": "assunto", "tipo": "string", "descrição": "Assunto do email (máximo 200 caracteres)"},
+                {"nome": "corpo", "tipo": "string", "descrição": "Corpo do email em HTML (máximo 50000 caracteres)"}
+            ],
+            "resposta_exemplo": {
+                "sucesso": True,
+                "mensagem": "Email enviado com sucesso!"
+            },
+            "limites": "50 requisições por minuto"
+        },
+        {
+            "endpoint": "/api/endpoints",
+            "método": "GET",
+            "descrição": "Retorna documentação dos endpoints disponíveis",
+            "requer_autenticação": False,
+            "parâmetros": [],
+            "resposta_exemplo": "Este documento"
+        },
+        {
+            "endpoint": "/api/docs",
+            "método": "GET",
+            "descrição": "Interface Swagger para documentação da API",
+            "requer_autenticação": False,
+            "parâmetros": []
+        }
+    ]
+    
+    return jsonify({
+        "serviço": "API de Envio de Email",
+        "versão": "1.0",
+        "endpoints": endpoints
+    })
+
+# Registrar os blueprints
+app.register_blueprint(api_bp, url_prefix='/api')  # Observe o url_prefix aqui!
+app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
 
 # Manipuladores de erro personalizados
 @app.errorhandler(404)
@@ -243,3 +326,6 @@ def unsupported_media_type(error):
 @app.errorhandler(400)
 def bad_request(error):
     return jsonify({"sucesso": False, "mensagem": "Requisição inválida"}), 400
+
+# if __name__ == "__main__":
+#     app.run(host="0.0.0.0", port=SERVICE_PORT, debug=DEBUG_MODE)

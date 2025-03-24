@@ -65,12 +65,12 @@ def invalid_email_payload():
 @pytest.fixture
 def email_validator_mock():
     """Fixture que configura um mock para o validador de email."""
-    with patch('app.validate_email') as mock:
+    with patch('app.validate_email_address') as mock:  # Agora mock a função correta!
         # Por padrão, emails válidos retornam True
         def side_effect(email):
             if '@' in email and '.' in email:
                 return True
-            raise ValueError("Email inválido")
+            return False  # Retorne False em vez de lançar uma exceção
         
         mock.side_effect = side_effect
         yield mock

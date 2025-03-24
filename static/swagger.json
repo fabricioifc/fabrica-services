@@ -1,0 +1,291 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "API de Envio de Email",
+    "description": "API para envio de emails através de requisições HTTP",
+    "version": "1.0",
+    "contact": {
+      "email": "suporte@example.com"
+    }
+  },
+  "host": "localhost:5000",
+  "basePath": "/",
+  "schemes": ["http"],
+  "consumes": ["application/json"],
+  "produces": ["application/json"],
+  "tags": [
+    {
+      "name": "Monitoramento",
+      "description": "Endpoints para monitoramento da API"
+    },
+    {
+      "name": "Email",
+      "description": "Endpoints para envio de email"
+    },
+    {
+      "name": "Documentação",
+      "description": "Endpoints para documentação da API"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": ["Monitoramento"],
+        "summary": "Verifica o status da API",
+        "description": "Retorna informações sobre o status do serviço",
+        "operationId": "health_check",
+        "produces": ["application/json"],
+        "responses": {
+          "200": {
+            "description": "Serviço funcionando corretamente",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "example": "ok"
+                },
+                "timestamp": {
+                  "type": "number",
+                  "format": "float",
+                  "example": 1647012345.678
+                },
+                "service": {
+                  "type": "string",
+                  "example": "email-service"
+                },
+                "version": {
+                  "type": "string",
+                  "example": "1.0"
+                },
+                "environment": {
+                  "type": "string",
+                  "example": "production"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Serviço indisponível",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "example": "error"
+                },
+                "message": {
+                  "type": "string",
+                  "example": "Serviço indisponível"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/enviar-email": {
+      "post": {
+        "tags": ["Email"],
+        "summary": "Envia um email",
+        "description": "Envia um email para o destinatário especificado",
+        "operationId": "enviar_email",
+        "consumes": ["application/json"],
+        "produces": ["application/json"],
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-KEY",
+            "description": "Chave de API para autenticação",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "body",
+            "description": "Dados do email a ser enviado",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "required": ["destinatario", "assunto", "corpo"],
+              "properties": {
+                "destinatario": {
+                  "type": "string",
+                  "example": "destinatario@example.com",
+                  "description": "Email do destinatário"
+                },
+                "assunto": {
+                  "type": "string",
+                  "example": "Assunto do email",
+                  "description": "Assunto do email (máximo 200 caracteres)"
+                },
+                "corpo": {
+                  "type": "string",
+                  "example": "<p>Conteúdo do email em HTML</p>",
+                  "description": "Corpo do email em HTML (máximo 50000 caracteres)"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Email enviado com sucesso",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "sucesso": {
+                  "type": "boolean",
+                  "example": true
+                },
+                "mensagem": {
+                  "type": "string",
+                  "example": "Email enviado com sucesso!"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requisição inválida",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "sucesso": {
+                  "type": "boolean",
+                  "example": false
+                },
+                "mensagem": {
+                  "type": "string",
+                  "example": "Campo obrigatório ausente: destinatario"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autorizado",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "sucesso": {
+                  "type": "boolean",
+                  "example": false
+                },
+                "mensagem": {
+                  "type": "string",
+                  "example": "Não autorizado"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Content-Type não suportado",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "sucesso": {
+                  "type": "boolean",
+                  "example": false
+                },
+                "mensagem": {
+                  "type": "string",
+                  "example": "Formato de requisição inválido, esperado application/json"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Taxa limite excedida",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "sucesso": {
+                  "type": "boolean",
+                  "example": false
+                },
+                "mensagem": {
+                  "type": "string",
+                  "example": "Taxa limite excedida. Tente novamente mais tarde."
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erro no servidor",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "sucesso": {
+                  "type": "boolean",
+                  "example": false
+                },
+                "mensagem": {
+                  "type": "string",
+                  "example": "Erro no servidor"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/endpoints": {
+      "get": {
+        "tags": ["Documentação"],
+        "summary": "Lista os endpoints disponíveis",
+        "description": "Retorna uma listagem e documentação dos endpoints disponíveis",
+        "operationId": "api_endpoints",
+        "produces": ["application/json"],
+        "responses": {
+          "200": {
+            "description": "Lista de endpoints",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "serviço": {
+                  "type": "string",
+                  "example": "API de Envio de Email"
+                },
+                "versão": {
+                  "type": "string",
+                  "example": "1.0"
+                },
+                "endpoints": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "endpoint": {
+                        "type": "string",
+                        "example": "/health"
+                      },
+                      "método": {
+                        "type": "string",
+                        "example": "GET"
+                      },
+                      "descrição": {
+                        "type": "string",
+                        "example": "Verificação de status da API"
+                      },
+                      "requer_autenticação": {
+                        "type": "boolean",
+                        "example": false
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {},
+  "securityDefinitions": {
+    "ApiKeyAuth": {
+      "type": "apiKey",
+      "in": "header",
+      "name": "X-API-KEY"
+    }
+  }
+}

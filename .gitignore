@@ -175,3 +175,7 @@ cython_debug/
 
 __pycache__/
 output/
+
+logs/
+coverage_report/
+.coverage

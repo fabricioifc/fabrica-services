@@ -21,15 +21,23 @@ services:
       - TZ=${TIMEZONE:-UTC}
       - GUNICORN_WORKERS=${GUNICORN_WORKERS:-2}
       - GUNICORN_TIMEOUT=${GUNICORN_TIMEOUT:-120}
-      - API_KEY=${API_KEY:-} # Chave de API para autenticação
+      - API_KEY=${API_KEY:-test-api-key} # Valor padrão adicionado
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:8000,https://fsw-ifc.brdrive.net}
+      - TESTING=${TESTING:-False}
     volumes:
       - ${LOG_DIR:-./logs}:/app/logs
+      - ./static:/app/static # Novo volume para arquivos estáticos
     networks:
       - fabrica-service-network
     healthcheck:
+      # Atualizado para o novo caminho
       test:
-        ["CMD", "curl", "-f", "http://localhost:${SERVICE_PORT:-5000}/health"]
+        [
+          "CMD",
+          "curl",
+          "-f",
+          "http://localhost:${SERVICE_PORT:-5000}/api/health",
+        ]
       interval: ${HEALTHCHECK_INTERVAL:-30s}
       timeout: ${HEALTHCHECK_TIMEOUT:-10s}
       retries: ${HEALTHCHECK_RETRIES:-3}
@@ -43,18 +51,35 @@ services:
         reservations:
           cpus: "0.25"
           memory: 128M
-    # Desabilitar acesso ao sistema de arquivos root
-    read_only: true
+    # Permitir escrita no diretório de logs
+    read_only: false
     # Diretórios temporários necessários
     tmpfs:
       - /tmp
       - /var/run
 
+  # Serviço específico para testes
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: email-service-test
+    environment:
+      - TESTING=True
+      - LOG_LEVEL=ERROR
+      - API_KEY=test-api-key
+    command: ./run_tests.sh
+    networks:
+      - fabrica-service-network
+    volumes:
+      - ./coverage_report:/app/coverage_report
+      - ./static:/app/static # Novo volume para arquivos estáticos
+
 networks:
   fabrica-service-network:
     driver: bridge
     # Configurações adicionais de segurança de rede
-    ipam:
-      driver: default
-      config:
-        - subnet: 172.28.0.0/16
+    # ipam:
+    #   driver: default
+    #   config:
+    #     - subnet: 172.28.0.0/16

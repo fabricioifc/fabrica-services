@@ -4,18 +4,20 @@ from unittest.mock import patch, MagicMock
 
 def test_health_check(client):
     """Testa o endpoint de health check."""
-    response = client.get('/health')
+    # URL alterada de /health para /api/health
+    response = client.get('/api/health')
     data = json.loads(response.data)
     
-    assert response.status_code == 200
+    assert response.status_code == 201
     assert data["status"] == "ok"
     assert "timestamp" in data
     assert data["service"] == "email-service"
 
 def test_health_check_error(client):
     """Testa o endpoint de health check quando ocorre um erro."""
+    # URL alterada de /health para /api/health
     with patch('app.validar_configuracoes', side_effect=Exception("Erro de teste")):
-        response = client.get('/health')
+        response = client.get('/api/health')
         data = json.loads(response.data)
         
         assert response.status_code == 500
@@ -76,11 +78,9 @@ def test_enviar_email_invalid_email(client, invalid_email_payload, email_validat
     )
     data = json.loads(response.data)
     
-    # Adaptado para corresponder à atual resposta da API
-    assert response.status_code == 500
+    assert response.status_code == 400  # Ajustado para 400 conforme mudou na API
     assert data["sucesso"] is False
-    # A mensagem atual parece ser "Erro no servidor", não menciona "inválido"
-    # assert "inválido" in data["mensagem"]  # Removido esta verificação
+    assert "inválido" in data["mensagem"]
 
 def test_enviar_email_sem_content_type(client, valid_email_payload):
     """Testa o endpoint de envio de email sem content-type."""
@@ -212,3 +212,22 @@ def test_endpoint_nao_encontrado(client):
     assert response.status_code == 404
     assert data["sucesso"] is False
     assert "não encontrado" in data["mensagem"]
+
+# Testes para os novos endpoints
+def test_api_endpoints(client):
+    """Testa o endpoint de listagem de endpoints."""
+    response = client.get('/api/endpoints')
+    data = json.loads(response.data)
+    
+    assert response.status_code == 200
+    assert "serviço" in data
+    assert "endpoints" in data
+    assert isinstance(data["endpoints"], list)
+    assert len(data["endpoints"]) >= 3  # Deve ter pelo menos 3 endpoints listados
+
+def test_api_docs(client):
+    """Testa o acesso à documentação Swagger."""
+    response = client.get('/api/docs/')
+    
+    assert response.status_code == 200
+    assert b"swagger" in response.data.lower()  # Verifica se a página Swagger é carregada
