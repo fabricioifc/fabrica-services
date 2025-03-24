@@ -312,7 +312,7 @@ def root():
 
 # Registrar os blueprints
 app.register_blueprint(api_bp, url_prefix='/api')  # Mantém o url_prefix /api
-app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
+app.register_blueprint(swaggerui_blueprint)
 
 # Manipuladores de erro personalizados
 @app.errorhandler(404)
