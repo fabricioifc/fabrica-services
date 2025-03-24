@@ -74,16 +74,16 @@ logger = logging.getLogger("email-api")
 logger.addFilter(RequestIdFilter())
 
 # Configuração do Swagger
-SWAGGER_URL = '/api/docs'  # URL para acessar a UI do Swagger
-API_URL = '/static/swagger.json'  # Onde o arquivo de especificação Swagger está localizado
+# SWAGGER_URL = '/api/docs'  # URL para acessar a UI do Swagger
+# API_URL = '/static/swagger.json'  # Onde o arquivo de especificação Swagger está localizado
 
-swaggerui_blueprint = get_swaggerui_blueprint(
-    SWAGGER_URL,
-    API_URL,
-    config={
-        'app_name': "API de Envio de Email"
-    }
-)
+# swaggerui_blueprint = get_swaggerui_blueprint(
+#     SWAGGER_URL,
+#     API_URL,
+#     config={
+#         'app_name': "API de Envio de Email"
+#     }
+# )
 
 @app.route('/api/docs', methods=['GET'])
 def custom_swagger_ui():
@@ -316,7 +316,7 @@ def root():
 
 # Registrar os blueprints
 app.register_blueprint(api_bp, url_prefix='/api')  # Mantém o url_prefix /api
-app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
+# app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
 
 # Manipuladores de erro personalizados
 @app.errorhandler(404)
