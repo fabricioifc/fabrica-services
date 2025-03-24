@@ -167,7 +167,7 @@ def health_check():
         return jsonify({"status": "error", "message": "Serviço indisponível"}), 500
 
 @api_bp.route('/enviar-email', methods=['POST', 'OPTIONS'])
-@limiter.limit("50 per minute")  # Limite de taxa específico para envio de email
+@limiter.limit("5 per minute")  # Limite de taxa específico para envio de email
 @require_api_key  # Proteção com API key
 def api_enviar_email():
     if request.method == 'OPTIONS':
