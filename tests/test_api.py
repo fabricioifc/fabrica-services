@@ -227,7 +227,8 @@ def test_api_endpoints(client):
 
 def test_api_docs(client):
     """Testa o acesso à documentação Swagger."""
-    response = client.get('/api/docs/')
+    # Usar follow_redirects=True para seguir o redirecionamento
+    response = client.get('/api/docs/', follow_redirects=True)
     
     assert response.status_code == 200
     assert b"swagger" in response.data.lower()  # Verifica se a página Swagger é carregada

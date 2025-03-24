@@ -4,6 +4,9 @@
 # Mostrar informações iniciais
 echo "Starting application..."
 
+# Execute run_swagger.sh
+./run_swagger.sh
+
 # Verificar se está em modo de teste
 if [ "${TESTING}" != "True" ]; then
     echo "Running tests before starting the application..."
@@ -25,6 +28,8 @@ if [ "${TESTING}" != "True" ]; then
         --bind 0.0.0.0:${SERVICE_PORT:-5000} \
         --workers ${GUNICORN_WORKERS:-2} \
         --timeout ${GUNICORN_TIMEOUT:-120} \
+        --access-logfile - \
+        --error-logfile - \
         app:app
 else
     echo "Running in test mode. Skipping application startup."

@@ -28,7 +28,8 @@ RUN mkdir -p /app/logs && chmod 755 /app/logs
 # Copiar e tornar os scripts executáveis
 COPY entrypoint.sh .
 COPY run_tests.sh .
-RUN chmod +x entrypoint.sh run_tests.sh
+COPY run_swagger.sh .
+RUN chmod +x entrypoint.sh run_tests.sh run_swagger.sh
 
 # Expor a porta configurável
 EXPOSE ${SERVICE_PORT}

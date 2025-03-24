@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, Blueprint, abort, render_template
+from flask import Flask, request, jsonify, Blueprint, abort, render_template, redirect
 from flask_cors import CORS
 from services.email_service import enviar_email, validar_configuracoes
 import logging
@@ -74,16 +74,34 @@ logger = logging.getLogger("email-api")
 logger.addFilter(RequestIdFilter())
 
 # Configuração do Swagger
-SWAGGER_URL = '/api/docs'  # URL para acessar a UI do Swagger
-API_URL = '/static/swagger.json'  # Onde o arquivo de especificação Swagger está localizado
+# SWAGGER_URL = '/api/docs'  # URL para acessar a UI do Swagger
+# API_URL = '/static/swagger.json'  # Onde o arquivo de especificação Swagger está localizado
 
-swaggerui_blueprint = get_swaggerui_blueprint(
-    SWAGGER_URL,
-    API_URL,
-    config={
-        'app_name': "API de Envio de Email"
-    }
-)
+# # Prefixo para os caminhos estáticos
+# STATIC_URL = '/static/swagger-ui'  # Pasta onde os arquivos do Swagger UI foram copiados
+
+# swaggerui_blueprint = get_swaggerui_blueprint(
+#     SWAGGER_URL,
+#     API_URL,
+#     config={
+#         'app_name': "API de Envio de Email",
+#         # Usar arquivos estáticos
+#         'swagger_ui_bundle_js': f'{STATIC_URL}/swagger-ui-bundle.js',
+#         'swagger_ui_standalone_preset_js': f'{STATIC_URL}/swagger-ui-standalone-preset.js',
+#         'swagger_ui_css': f'{STATIC_URL}/swagger-ui.css',
+#         'swagger_ui_favicon': f'{STATIC_URL}/favicon-32x32.png'
+#     }
+# )
+
+app.static_folder = 'static'
+app.static_url_path = '/static'
+
+@app.route('/api/docs')
+@app.route('/api/docs/')  # Lidar com ambos os caminhos
+def swagger_docs():
+    """Servir a página personalizada do Swagger UI."""
+    return app.send_static_file('swagger-ui/index.html')
+
 
 # Middleware para adicionar request_id a todas as solicitações
 @app.before_request
@@ -312,7 +330,7 @@ def root():
 
 # Registrar os blueprints
 app.register_blueprint(api_bp, url_prefix='/api')  # Mantém o url_prefix /api
-app.register_blueprint(swaggerui_blueprint)
+# app.register_blueprint(swaggerui_blueprint)
 
 # Manipuladores de erro personalizados
 @app.errorhandler(404)

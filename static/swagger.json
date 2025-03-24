@@ -5,12 +5,12 @@
     "description": "API para envio de emails através de requisições HTTP",
     "version": "1.0",
     "contact": {
-      "email": "suporte@example.com"
+      "email": "fabricadesoftware.videira@ifc.edu.br"
     }
   },
-  "host": "localhost:5000",
-  "basePath": "/",
-  "schemes": ["http"],
+  "host": "fsw-ifc.brdrive.net",
+  "basePath": "/services",
+  "schemes": ["https"],
   "consumes": ["application/json"],
   "produces": ["application/json"],
   "tags": [

@@ -179,3 +179,4 @@ output/
 logs/
 coverage_report/
 .coverage
+static/swagger-ui/
