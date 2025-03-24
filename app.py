@@ -151,7 +151,7 @@ def validate_email_address(email):
 api_bp = Blueprint('api', __name__)
 
 @api_bp.route('/health', methods=['GET'])
-@limiter.limit("10 per minute")
+@limiter.limit("3 per minute")
 def health_check():
     try:
         config = validar_configuracoes()
@@ -167,7 +167,7 @@ def health_check():
         return jsonify({"status": "error", "message": "Serviço indisponível"}), 500
 
 @api_bp.route('/enviar-email', methods=['POST', 'OPTIONS'])
-@limiter.limit("5 per minute")  # Limite de taxa específico para envio de email
+@limiter.limit("10 per minute")  # Limite de taxa específico para envio de email
 @require_api_key  # Proteção com API key
 def api_enviar_email():
     if request.method == 'OPTIONS':
