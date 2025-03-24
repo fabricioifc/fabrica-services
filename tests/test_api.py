@@ -8,7 +8,7 @@ def test_health_check(client):
     response = client.get('/api/health')
     data = json.loads(response.data)
     
-    assert response.status_code == 201
+    assert response.status_code == 200
     assert data["status"] == "ok"
     assert "timestamp" in data
     assert data["service"] == "email-service"
