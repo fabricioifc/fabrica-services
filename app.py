@@ -93,6 +93,9 @@ swaggerui_blueprint = get_swaggerui_blueprint(
 def before_request():
     request.id = secrets.token_hex(8)  # ID único para cada solicitação
     
+    # Log de todas as requisições recebidas
+    logger.debug(f"Requisição recebida: {request.method} {request.path} de {request.remote_addr}")
+    
     # Verificar apenas para os endpoints não-OPTIONS
     if request.method != 'OPTIONS':
         # Verificar o tamanho do conteúdo
@@ -229,15 +232,15 @@ def api_enviar_email():
         logger.exception("Erro não tratado na API")
         return jsonify({"sucesso": False, "mensagem": "Erro no servidor"}), 500
 
-# Rota para documentação de endpoints (definida diretamente no app, não no blueprint)
-@app.route('/api/endpoints', methods=['GET'])
+# Rota para documentação de endpoints
+@api_bp.route('/endpoints', methods=['GET'])
 def api_endpoints():
     """
     Retorna uma listagem e documentação dos endpoints disponíveis.
     """
     endpoints = [
         {
-            "endpoint": "/health",
+            "endpoint": "/api/health",
             "método": "GET",
             "descrição": "Verificação de status da API",
             "requer_autenticação": False,
@@ -287,14 +290,31 @@ def api_endpoints():
         }
     ]
     
+    # Adicionar informação sobre a base da URL
+    base_url_info = {
+        "nota": "Estes endpoints podem ser acessados via o prefixo '/services' no domínio principal, por exemplo: https://fsw-ifc.brdrive.net/services/api/health"
+    }
+    
     return jsonify({
         "serviço": "API de Envio de Email",
         "versão": "1.0",
-        "endpoints": endpoints
+        "endpoints": endpoints,
+        "informações_adicionais": base_url_info
+    })
+
+# Rota raiz para redirecionamento para a documentação
+@app.route('/', methods=['GET'])
+def root():
+    return jsonify({
+        "mensagem": "API de Envio de Email",
+        "versão": "1.0",
+        "documentação": "/api/docs",
+        "endpoints": "/api/endpoints",
+        "status": "/api/health"
     })
 
 # Registrar os blueprints
-app.register_blueprint(api_bp, url_prefix='/api')  # Observe o url_prefix aqui!
+app.register_blueprint(api_bp, url_prefix='/api')  # Mantém o url_prefix /api
 app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
 
 # Manipuladores de erro personalizados
