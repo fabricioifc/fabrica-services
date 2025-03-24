@@ -22,9 +22,6 @@ DEBUG_MODE = os.getenv("FLASK_DEBUG", "False").lower() == "true"
 APPLICATION_ROOT = os.getenv("APPLICATION_ROOT", "")
 API_KEY = os.getenv("API_KEY", "")  # Chave de API para autenticação
 
-if not API_KEY:
-    raise ValueError("API_KEY não configurada")
-
 # Listas de origens permitidas
 ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
 
@@ -87,6 +84,10 @@ swaggerui_blueprint = get_swaggerui_blueprint(
         'app_name': "API de Envio de Email"
     }
 )
+
+@app.route('/api/docs', methods=['GET'])
+def custom_swagger_ui():
+    return render_template('custom_swagger.html')
 
 # Middleware para adicionar request_id a todas as solicitações
 @app.before_request
