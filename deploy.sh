@@ -7,7 +7,7 @@ NETWORK_NAME_NGINX=fabrica-nginx-proxy-network
 DOCKER_COMPOSE_FILE=docker-compose.yml
 DOCKER_COMPOSE_BUILD=true
 BRANCH=main
-ENVIRONMENT=${1:}  # dev|development|prod|production
+ENVIRONMENT=${1}  # dev|development|prod|production
 
 # Função para exibir mensagens de erro e sair
 error_exit() {
