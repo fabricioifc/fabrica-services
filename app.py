@@ -131,13 +131,51 @@ def require_api_key(f):
     return decorated_function
 
 # Função para sanitizar entrada
-def sanitize_input(data):
+def sanitize_input(data, skip_fields=None):
+    # Garantir que skip_fields é uma lista, mesmo que None
+    if skip_fields is None:
+        skip_fields = []
+    
     if isinstance(data, dict):
-        return {k: sanitize_input(v) for k, v in data.items()}
+        sanitized_data = {}
+        for k, v in data.items():
+            # Pular a sanitização para campos na lista skip_fields
+            if k in skip_fields:
+                sanitized_data[k] = v  # Manter o valor original
+            else:
+                # Sanitizar todos os outros campos normalmente
+                sanitized_data[k] = sanitize_input(v, skip_fields)
+        return sanitized_data
+    elif isinstance(data, list):
+        # Sanitizar listas recursivamente
+        return [sanitize_input(item, skip_fields) for item in data]
     elif isinstance(data, str):
+        # Sanitizar strings removendo todas as tags HTML
         return bleach.clean(data, tags=[], attributes={}, strip=True)
     else:
+        # Outros tipos de dados (int, float, bool, None) são retornados como estão
         return data
+
+# def sanitize_input(data):
+#     if isinstance(data, dict):
+#         # Se for o campo 'corpo', permite tags HTML específicas
+#         if 'corpo' in data:
+#             data['corpo'] = bleach.clean(
+#                 data['corpo'],
+#                 tags=['h1', 'h2', 'h3', 'p', 'br', 'strong', 'em', 'u', 'hr'],
+#                 attributes={},
+#                 strip=True
+#             )
+#             # Para os outros campos, continua removendo todas as tags
+#             sanitized_data = {k: sanitize_input(v) if k != 'corpo' else v for k, v in data.items()}
+#         else:
+#             sanitized_data = {k: sanitize_input(v) for k, v in data.items()}
+#         logger.info(f"Entrada sanitizada: {sanitized_data}")
+#         return sanitized_data
+#     elif isinstance(data, str):
+#         return bleach.clean(data, tags=[], attributes={}, strip=True)
+#     else:
+#         return data
 
 # Função para validar email
 def validate_email_address(email):
@@ -204,7 +242,7 @@ def api_enviar_email():
                 return jsonify({"sucesso": False, "mensagem": "Nenhum dado fornecido"}), 400
             
             # Sanitizar todos os dados de entrada
-            dados = sanitize_input(dados)
+            dados = sanitize_input(dados, skip_fields=['corpo'])
         except json.JSONDecodeError:
             return jsonify({"sucesso": False, "mensagem": "JSON inválido"}), 400
         

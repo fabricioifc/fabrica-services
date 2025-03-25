@@ -46,7 +46,7 @@ deploy_production() {
     
     # Puxar as últimas mudanças do GitHub
     echo "Puxando as últimas mudanças do GitHub..."
-    # git pull origin $BRANCH || error_exit "Não foi possível puxar as últimas mudanças do GitHub ($BRANCH)"
+    git pull origin $BRANCH || error_exit "Não foi possível puxar as últimas mudanças do GitHub ($BRANCH)"
     
     # Criar a rede NETWORK_NAME se ela não existir
     if [ ! "$(docker network ls --format '{{.Name}}' | grep $NETWORK_NAME)" ]; then
